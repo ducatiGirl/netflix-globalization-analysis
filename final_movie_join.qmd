@@ -1,0 +1,160 @@
+---
+title: "Global Screens: Do International Titles Outlast Hollywood Blockbusters?"
+author: Anjali Abhilash, Salsabila Abu
+date: Feb 12, 2026
+format:
+  html:
+    mainfont: "Times New Roman"
+    embed-resources: true
+    toc: true
+    code-fold: true
+---
+
+# Part I: Find the Data
+
+### First Data Set: Netflix Engagement
+* Source: Netflix Engagement Report (Jan-Dec 2023)
+
+* Reliability: This is first-party data released directly by Netflix. It is the most "real" reflection of viewership available because it comes from their internal server logs rather than third-party estimates.
+
+* Meaning: It represents the total "Hours Viewed" and "Views" for over 18,000 titles. Highlights which titles are "Available Globally." This helps identify if Netflix's international expansion strategy drives higher engagement for non-US shows.
+
+### Second Data Set: IBM/IMDB Movie Data
+* Source: IMDB 2023 Movie Metadata .
+
+* Reliability: IMDB is the industry standard for crowd-sourced and verified film metadata.
+
+* Meaning: It adds "Content Context" that Netflix lacks: User Ratings, Budgets, Genres, and MPAA ratings. Contains countries_origin, Languages, and budget which allows us to verify which films are "International" (non-US origin) and which are "Blockbusters" (high budget)
+
+```{r}
+#| label: setup-data
+#| message: false
+library(tidyverse)
+
+netflix_full <- read_csv("Netflix_Engagement_Full_Year_2023.csv")
+ibm_data <- read_csv("merged_movies_data_2023.csv")
+
+glimpse(netflix_full)
+glimpse(ibm_data)
+```
+
+# Part II: Data Join
+
+```{r}
+#| label: join-data
+
+# Clean IBM data
+ibm_clean <- ibm_data %>%
+  mutate(clean_title = str_remove(Title, "^\\d+\\.\\s+"),
+         clean_title = str_to_lower(str_trim(clean_title)))
+
+# Clean Netflix data
+netflix_clean <- netflix_full %>%
+  mutate(clean_title = str_to_lower(str_trim(Title)))
+
+# Perform Inner Join
+joined_data <- netflix_clean %>%
+  inner_join(ibm_clean, by = "clean_title")
+
+glimpse(joined_data)
+```
+
+### The Join Strategy
+* To join these, we use the Title column. However, the IBM data has numbers in the titles (e.g., "1. Barbie").
+
+Cleaning Actions taken:
+
+* Stripped leading numbers and periods from IMDB titles.
+* Converted all titles to lowercase and trimmed whitespace to ensure "The Mother" matches "the mother".
+* Ensure the "Country" and "Budget" columns are usable.
+
+# Part III: Data Documentation
+
+
+### Relevant Variables: 
+* Hours Viewed: Primary measure of popularity.
+* Rating: Critical reception from IMDB.
+* countries_origin: Used to define International vs. Domestic status.
+* budget: Used to define the "Blockbuster" status.
+
+### Ethical Statement
+
+Discuss how your data reflects Fairness and Transparency: 
+* Note that the IBM/IMDB dataset may be biased toward Western audiences, as user ratings and "Votes" often come from English-speaking regions. This might under-represent the "true" popularity of international films in their home markets. Regarding Human Values, your analysis should consider if Netflix's algorithm (Promotion of Human Values/Human Control) favors high-budget US blockbusters over international gems through its "Top 10" recommendations.
+* While the Netflix data is transparent regarding hours viewed, it misses demographic data of the viewers (Privacy). This lack of data prevents us from seeing if certain genres are promoted more heavily to specific marginalized groups (Fairness). Regarding Human Values, the IMDB rating system is susceptible to 'review bombing,' which might bias our understanding of a film’s actual quality versus its internet popularity.
+
+# Part IV: Combined Data Wrangling
+
+### Action 1: Define International vs. US
+* We created a categorical column to separate Hollywood-centric content from global productions.
+
+### Action 2: Clean Budget Data
+* We used string manipulation to extract numeric values from the budget strings to identify high-investment "Blockbusters."
+
+### Action 3: Visual Comparison of Engagement and Quality
+* We created a summary to contrast how these two groups perform in terms of viewership volume versus critical quality.
+
+```{r}
+#| label: wrangling-actions
+
+# 1. Define 'International' vs 'Domestic' (US)
+wrangled_data <- joined_data %>%
+  mutate(content_origin = ifelse(str_detect(countries_origin, "United States"), 
+                                 "US/Blockbuster Path", "International"))
+
+# 2. Clean Budget and Define Blockbuster
+wrangled_data <- wrangled_data %>%
+  mutate(numeric_budget = as.numeric(str_extract(budget, "\\d+")))
+
+# 3. Create Summary Table
+summary_stats <- wrangled_data %>%
+  group_by(content_origin) %>%
+  summarize(
+    avg_hours = mean(`Hours Viewed`, na.rm = TRUE),
+    avg_rating = mean(Rating, na.rm = TRUE)
+  )
+```
+::: {layout-ncol=2}
+```{r}
+#| label: plot-popularity
+ggplot(summary_stats, aes(x = content_origin, y = avg_hours, fill = content_origin)) +
+  geom_col(width = 0.7) +
+  geom_text(aes(label = round(avg_hours/1e6, 1)), vjust = -0.5, fontface = "bold") +
+  scale_fill_manual(values = c("#E50914", "#221F1F")) + 
+  labs(title = "Average Popularity",
+       subtitle = "Millions of Hours Viewed",
+       x = "", y = "Hours (Millions)") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+#| label: plot-quality
+ggplot(summary_stats, aes(x = content_origin, y = avg_rating, fill = content_origin)) +
+  geom_col(width = 0.7) +
+  geom_text(aes(label = round(avg_rating, 1)), vjust = -0.5, fontface = "bold") +
+  scale_fill_manual(values = c("#564d4d", "#b81d24")) + 
+  coord_cartesian(ylim = c(0, 10)) + 
+  labs(title = "Average Quality",
+       subtitle = "IMDB User Rating (0-10)",
+       x = "", y = "Rating") +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+:::
+
+# Part V: Group Information
+
+::: {layout-nrow=2}
+### Our Mission
+Our group is investigating the "Global Shift" in streaming. We want to know if high-budget Hollywood blockbusters are losing their dominance to international titles that may have lower budgets but higher "staying power" and cultural impact.
+
+**Lab Section:** BB Tuesday 1:30 PM  
+**TA:** Sophia Dai
+:::
+
+### Team Members
+* **Member 1:** Anjali Abhilash; aabhil@uw.edu - Interested in the globalization of media. Bio: Aspiring data scientist focusing on entertainment trends.
+* **Member 2:** Salsabila Abu; xsunsax@uw.edu - Interested in international cinema. Bio: Enjoys analyzing how non-English content breaks language barriers on streaming.
+
+### Coding Notes
+We utilized `str_extract` and `str_detect` from the `stringr` package (part of tidyverse) to parse the budget and country columns. We learned how to use `scale_y_log10()` in `ggplot2` by referencing the (https://ggplot2.tidyverse.org/reference/scale_continuous.html).
+

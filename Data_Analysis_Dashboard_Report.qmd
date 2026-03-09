@@ -1,0 +1,256 @@
+---
+title: "Data_Analysis_Dashboard"
+author: "Anjali Abhilash and Salsabila Abu"
+date: today
+format: 
+  html:
+    embed-resources: true
+theme: default
+---
+
+## Project Overview
+
+Streaming platforms have dramatically changed how audiences consume film and television content. Services like Netflix now track large-scale engagement data, allowing researchers to examine which titles attract the most attention and how audience behavior relates to characteristics of the films themselves. At the same time, platforms such as IMDb provide crowd-sourced ratings and production metadata that help describe how viewers evaluate films.
+
+Streaming platforms have dramatically reshaped how audiences consume film and television content. Services like Netflix now distribute films across hundreds of countries simultaneously, creating the possibility for a single title to reach a truly global audience. As streaming platforms expand internationally, entertainment companies have increasingly invested in producing films and television shows from many different countries in hopes of generating global hits.
+
+However, researchers and industry analysts have questioned whether global audiences actually watch the same content. According to an analysis by *The Entertainment Strategy Guy*, the success of international titles on streaming platforms may be overstated. While major successes like *Squid Game* suggest that global audiences are embracing foreign-language content, the data shows that most international titles fail to achieve widespread popularity across different regions. Instead, viewers often prefer content produced in their own language or region. This raises important questions about how globalized streaming platforms truly are and whether international films receive the same level of engagement as domestic productions.
+
+https://entertainment.substack.com/p/is-this-what-the-globalization-of
+
+**Big Question 1:** **Does a film’s country of origin (U.S. vs International) influence its popularity and perceived quality on Netflix?**
+
+**Big Question 2:** **Is there a relationship between a movie’s production budget and its total viewership on Netflix?**
+
+**Big Question 3:** **Do higher-rated movies tend to receive more viewership on Netflix?**
+
+Understanding these relationships is important because streaming services increasingly influence which films gain visibility and success. By analyzing viewing engagement alongside film metadata, this project aims to explore whether factors such as production investment, audience ratings, and geographic origin help explain why certain titles become popular on global streaming platforms while others do not.
+
+![Netflix Streaming](https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg)
+
+## Data Context
+
+### Netflix Engagement Dataset
+
+Source:\
+https://about.netflix.com/en/news/what-we-watched-a-netflix-engagement-report
+
+The Netflix dataset was released by Netflix as part of its public **What We Watched Engagement Report**. The dataset records aggregated global viewing activity for titles available on the platform during 2023. Each row represents a film or show along with the number of hours it was viewed during the reporting period.
+
+The dataset includes thousands of titles viewed by Netflix subscribers worldwide. The primary measurement is **Hours Viewed**, which represents the total amount of time users spent watching each title. Unlike ratings or reviews, this metric directly reflects audience engagement.
+
+The data was collected during the **January–December 2023 reporting periods**, with Netflix releasing two separate engagement reports covering the first and second halves of the year. Because Netflix aggregates viewing behavior across its global subscriber base, the dataset captures broad trends in streaming consumption.
+
+One benefit of this dataset is that it measures real viewing behavior rather than opinions or marketing influence. However, it is limited to Netflix users and therefore does not represent audiences using other streaming services or traditional media platforms.
+
+------------------------------------------------------------------------
+
+### IMDb Movie Metadata Dataset
+
+Source:\
+https://www.kaggle.com/datasets/raedaddala/imdb-movies-from-1960-to-2023
+
+The second dataset used in this project contains movie metadata sourced from the Internet Movie Database (IMDb) and compiled through Kaggle. IMDb is a widely used entertainment database that collects user ratings and production information about films.
+
+The dataset contains films released between **2015 and 2023**, with each row representing an individual movie. Variables include user ratings, production budgets, countries of origin, and awards information. IMDb ratings are generated through voluntary user participation, meaning that the dataset captures audience opinions rather than direct viewing behavior.
+
+This dataset provides valuable contextual information about movies that complements Netflix engagement data. By joining the two datasets through film titles, we are able to explore how movie characteristics relate to streaming engagement.
+
+One limitation of this dataset is that IMDb ratings are influenced by user participation and may overrepresent highly engaged audiences. Additionally, because the dataset includes films from multiple years, some titles may not appear in the Netflix engagement dataset, limiting the overlap between the two sources.
+
+# Loading Joined Data
+```{r}
+library(tidyverse)
+
+netflix_raw <- read_csv("Netflix_Engagement_Full_Year_2023.csv")
+
+```
+
+```{r}
+imdb_files <- paste0("merged_movies_data_", 2015:2023, ".csv")
+imdb_raw <- map_df(imdb_files, read_csv)
+
+netflix <- netflix_raw |>
+  group_by(Title, Available_Global = `Available Globally?`) |>
+  summarize(
+    Hours_Viewed = sum(`Hours Viewed`, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+imdb <- imdb_raw |>
+  mutate(Title = str_remove(Title, "^\\d+\\. "))
+
+joined_data <- inner_join(netflix, imdb, by = "Title")
+
+glimpse(joined_data)
+```
+
+# Data Wrangling
+
+## Action 1 - Fixing Data Type
+
+Hours Viewed originally in text making it into a number
+
+```{r}
+joined_data <- joined_data |>
+  mutate(
+    Hours_Viewed = as.numeric(Hours_Viewed),
+    numeric_budget = readr::parse_number(budget)
+  )
+
+```
+
+## Action 2 – Selecting Relevant Columns
+
+To simplify the dataset and focus on variables directly relevant to our research question, we removed extraneous columns and retained only variables necessary for analysis. This reduces noise, improves readability, and prevents accidental misuse of unrelated features.
+
+```{r}
+joined_data <- joined_data |>
+  select(Title, Available_Global, Hours_Viewed, Rating, budget, 
+         numeric_budget, countries_origin, awards_content)
+```
+
+## Action 3 - Create New Categorical Column
+
+Classify titles as High Viewership or Low Viewership relative to the dataset’s median engagement
+
+```{r}
+joined_data <- joined_data |>
+  mutate(Viewership_Level = ifelse(
+    Hours_Viewed > median(Hours_Viewed, na.rm = TRUE),
+    "High Viewership",
+    "Low Viewership"
+  ))
+
+```
+
+## Action 4 – Creating a New Numerical Variable
+
+Showing the percentage hours viewed on a film compared to the whole data set
+
+```{r}
+joined_data <- joined_data |>
+  mutate(Viewership_Percentage = (Hours_Viewed / sum(Hours_Viewed, na.rm = TRUE)) * 100)
+```
+
+## Action 5 Cleaning Budget Column
+
+Budget data is currently not numeric making it into a number
+
+```{r}
+joined_data <- joined_data |>
+  mutate(content_origin = ifelse(str_detect(countries_origin, "United States"), "US", "International"))
+  
+```
+
+## Action 6: New Variable
+
+Categorizing Internation or US based on Country origin
+
+```{r}
+joined_data <- joined_data |>
+  mutate(content_origin = ifelse(str_detect(countries_origin, "United States"), "US", "International"))
+```
+
+# Data Visualization
+
+```{r}
+summary_stats <- joined_data |>
+  group_by(content_origin) |>
+  summarize(
+    avg_hours = mean(Hours_Viewed, na.rm = TRUE),
+    avg_rating = mean(Rating, na.rm = TRUE)
+  )
+```
+
+## Visualization 1
+
+Does global availability on Netflix influence a film’s popularity and perceived quality?
+
+```{r}
+# Average Popularity
+ggplot(summary_stats, aes(x = content_origin, y = avg_hours, fill = content_origin)) +
+  geom_col(width = 0.7) +
+  geom_text(aes(label = round(avg_hours/1e6, 1)),
+            vjust = -0.5,
+            fontface = "bold") +
+  scale_fill_manual(values = c("#564d4d", "#b81d24")) +
+  labs(
+    title = "Average Popularity",
+    subtitle = "Millions of Hours Viewed",
+    x = "Film Origin",
+    y = "Hours (Millions)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+# Average Quality
+ggplot(summary_stats, aes(x = content_origin, y = avg_rating, fill = content_origin)) +
+  geom_col(width = 0.7) +
+  geom_text(aes(label = round(avg_rating, 1)),
+            vjust = -0.5,
+            fontface = "bold") +
+  scale_fill_manual(values = c("#564d4d", "#b81d24")) +
+  coord_cartesian(ylim = c(0,10)) +
+  labs(
+    title = "Average Quality",
+    subtitle = "IMDb User Rating (0–10)",
+    x = "Film Origin",
+    y = "Rating"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+## Visualization 2
+
+Is there a relationship between a movie’s production budget and its viewership on Netflix?
+
+```{r}
+library(plotly)
+library(ggplot2)
+
+# 1. Map the global x and y
+p <- ggplot(joined_data, aes(x = numeric_budget, y = Hours_Viewed)) +
+  # 2. Map the 'text' aesthetic ONLY to the points
+  geom_point(aes(text = paste("Movie:", Title, 
+                              "<br>Budget: $", format(numeric_budget, big.mark=","),
+                              "<br>Hours:", format(Hours_Viewed, big.mark=","))), 
+             color = "#b81d24", alpha = 0.6) +
+  # 3. This stays clean and calculates the slope correctly
+  geom_smooth(method = "lm", color = "black") +
+  labs(
+    title = "Budget vs Netflix Viewership",
+    x = "Production Budget (USD)",
+    y = "Hours Viewed"
+  ) +
+  theme_minimal()
+
+# 4. Use tooltip = "text" to show your custom formatting
+ggplotly(p, tooltip = "text")
+
+```
+
+Movies with larger production budgets often receive more marketing and global distribution, which may influence how many viewers they attract. This scatterplot explores whether higher budget films tend to receive more hours viewed on Netflix. The regression line helps illustrate whether a general trend exists between investment in production and audience engagement.
+
+## Visualization 3
+
+Do higher-rated movies tend to fall into the high viewership group on Netflix?
+
+```{r}
+
+ggplot(joined_data, aes(x = Viewership_Level, y = Rating, fill = Viewership_Level)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("#564d4d", "#b81d24")) +
+  labs(
+    title = "Ratings Distribution by Viewership Level",
+    subtitle = "Comparing IMDb Ratings Between High and Low Viewership Movies",
+    x = "Viewership Group",
+    y = "IMDb Rating"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+This boxplot compares IMDb ratings between movies classified as high viewership and low viewership based on median hours viewed. By examining the distribution of ratings in each group, we can evaluate whether higher-rated movies are more likely to receive greater audience engagement on Netflix.
