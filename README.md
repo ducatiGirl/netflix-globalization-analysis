@@ -23,7 +23,9 @@ At the stage of the dashboard, you just need to be able to display some data you
 Analyzed two independent data sets:
 1) Netflix Engagement Dataset
 2) IMDb Movie Metadata Dataset
+
 Three quality information visualizations:
+
 1) Histogram
 2) Interactive scatterpolot
 3) Box plot
