@@ -28,6 +28,6 @@ Three quality information visualizations:
 
 1) Histogram
 2) Interactive scatterpolot
-3) Box plot
+3) Stack Bar Graph
 Describes why the data and patterns we looked at are interesting
 Describes conclusions that we make based off what we found in the data
