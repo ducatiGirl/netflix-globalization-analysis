@@ -1,0 +1,352 @@
+---
+title: "Global Viewing Patterns: Netflix & IMDb Data"
+author: "Anjali Abhilash and Salsabila Abu"
+format:
+  dashboard:
+    theme: default
+    embed-resources: true
+---
+
+
+# Overview
+
+::: {.card title="Project Overview"}
+
+Streaming platforms have dramatically changed how audiences consume film and television content. Services like Netflix now track large-scale engagement data, allowing researchers to examine which titles attract the most attention and how audience behavior relates to characteristics of the films themselves. At the same time, platforms such as IMDb provide crowd-sourced ratings and production metadata that help describe how viewers evaluate films.
+
+Streaming platforms have dramatically reshaped how audiences consume film and television content. Services like Netflix now distribute films across hundreds of countries simultaneously, creating the possibility for a single title to reach a truly global audience. As streaming platforms expand internationally, entertainment companies have increasingly invested in producing films and television shows from many different countries in hopes of generating global hits.
+
+However, researchers and industry analysts have questioned whether global audiences actually watch the same content. According to an analysis by *The Entertainment Strategy Guy*, the success of international titles on streaming platforms may be overstated. While major successes like *Squid Game* suggest that global audiences are embracing foreign-language content, the data shows that most international titles fail to achieve widespread popularity across different regions. Instead, viewers often prefer content produced in their own language or region. This raises important questions about how globalized streaming platforms truly are and whether international films receive the same level of engagement as domestic productions.  
+
+<https://entertainment.substack.com/p/is-this-what-the-globalization-of>
+
+
+**Big Question 1:** **Does a film’s country of origin (U.S. vs International) influence its popularity and perceived quality on Netflix?**
+
+**Big Question 2:** **Is there a relationship between a movie’s production budget and its total viewership on Netflix?**
+
+**Big Question 3:** **Do higher-rated movies tend to receive more viewership on Netflix?**
+
+Understanding these relationships is important because streaming services increasingly influence which films gain visibility and success. By analyzing viewing engagement alongside film metadata, this project aims to explore whether factors such as production investment, audience ratings, and geographic origin help explain why certain titles become popular on global streaming platforms while others do not.
+
+![Netflix International Films](https://hips.hearstapps.com/hmg-prod/images/netflix-movies-august-lead-1596483362.jpg?crop=1.00xw:1.00xh;0,0&resize=640:*)
+:::
+
+
+::: {.card title="Key Takeaways"}
+
+This project explored how film characteristics relate to streaming success on Netflix by combining Netflix engagement data with IMDb movie metadata. Across the analysis, several patterns emerged that help explain how films perform on global streaming platforms.
+
+First, films produced in the United States tended to receive more total hours viewed on Netflix compared to international films. This suggests that U.S. productions still dominate in terms of audience reach, likely due to factors such as marketing investment, distribution advantages, and language accessibility. However, the difference in IMDb ratings between U.S. and international films was relatively small, indicating that international films are often perceived as comparable in quality.
+
+Second, the relationship between production budget and viewership appears to be positive but not perfectly linear. While higher-budget films often receive more viewership, the scatterplot shows several lower-budget films that still achieve strong engagement. This suggests that factors beyond budget—such as genre, marketing, or cultural relevance—may also influence streaming success.
+
+Third, the analysis of ratings and viewership suggests that higher-rated movies do not always receive the most viewing hours. Some films with moderate ratings still accumulate significant viewership, indicating that popularity on streaming platforms may also be influenced by recommendation algorithms, marketing exposure, or trending content.
+
+Overall, the analysis suggests that while investment and origin may influence popularity, streaming engagement is driven by a complex combination of factors. Future research could explore additional variables such as genre, release timing, or regional popularity to better understand how films succeed in global streaming environments.
+
+:::
+
+
+::: {.card title="Ethical / Data Limitations"}
+
+Several forms of bias may influence this combined dataset. Most notably, the Netflix engagement dataset includes titles viewed during the January–June 2023 reporting period but is not limited to films released in 2023. In contrast, the IMDb dataset used for merging primarily contains movies released in 2015 - 2024. As a result, the join inherently excludes many highly viewed Netflix titles that were released in earlier years, introducing a temporal selection bias. This mismatch may affect comparisons between viewing engagement and film characteristics, as older titles with significant viewership are systematically underrepresented in the merged data.
+
+Additional biases arise from platform-specific behaviors. Netflix engagement data reflects only Netflix subscribers, excluding viewing activity on other streaming services or traditional media channels. IMDb ratings rely on voluntary user participation, potentially overrepresenting highly engaged audiences.
+
+From a human rights perspective, privacy concerns are limited due to the aggregated nature of the data, but also that consumer's aren't aware clearly aware whether their habits are being tracked even though when subscribing to the service it is mentioned. However, transparency and accountability remain constrained because platforms at the end of the da are choosing which films they are choosing to promote to users without the transparency about what the conditions are for what is chosen to be shown to the users.
+:::
+
+# Data Context
+
+## Row 1 {height=40%}
+::: {.card title="Netflix Data"}
+Source:  
+https://about.netflix.com/en/news/what-we-watched-a-netflix-engagement-report
+
+The Netflix dataset was released by Netflix as part of its public **What We Watched Engagement Report**. The dataset records aggregated global viewing activity for titles available on the platform during 2023. Each row represents a film or show along with the number of hours it was viewed during the reporting period.
+
+The dataset includes thousands of titles viewed by Netflix subscribers worldwide. The primary measurement is **Hours Viewed**, which represents the total amount of time users spent watching each title. Unlike ratings or reviews, this metric directly reflects audience engagement.
+
+The data was collected during the **January–December 2023 reporting periods**, with Netflix releasing two separate engagement reports covering the first and second halves of the year. Because Netflix aggregates viewing behavior across its global subscriber base, the dataset captures broad trends in streaming consumption.
+
+One benefit of this dataset is that it measures real viewing behavior rather than opinions or marketing influence. However, it is limited to Netflix users and therefore does not represent audiences using other streaming services or traditional media platforms.
+:::
+
+## Row 2 {height=40%}
+::: {.card title="IMDB Data"}
+Source:  
+https://www.kaggle.com/datasets/raedaddala/imdb-movies-from-1960-to-2023
+
+The second dataset used in this project contains movie metadata sourced from the Internet Movie Database (IMDb) and compiled through Kaggle. IMDb is a widely used entertainment database that collects user ratings and production information about films.
+
+The dataset contains films released between **2015 and 2023**, with each row representing an individual movie. Variables include user ratings, production budgets, countries of origin, and awards information. IMDb ratings are generated through voluntary user participation, meaning that the dataset captures audience opinions rather than direct viewing behavior.
+
+This dataset provides valuable contextual information about movies that complements Netflix engagement data. By joining the two datasets through film titles, we are able to explore how movie characteristics relate to streaming engagement.
+
+One limitation of this dataset is that IMDb ratings are influenced by user participation and may overrepresent highly engaged audiences. Additionally, because the dataset includes films from multiple years, some titles may not appear in the Netflix engagement dataset, limiting the overlap between the two sources.
+
+:::
+
+## Row 3 {height=20%}
+
+```{r}
+#| warning: false
+
+library(tidyverse)
+library(plotly)
+
+netflix_raw_First_Half_2023 <- read_csv("What_We_Watched_A_Netflix_Engagement_Report_2023Jan-Jun.csv",
+                        skip = 4)
+netflix_raw_Second_Half_2023 <- read_csv("What_We_Watched_A_Netflix_Engagement_Report_2023Jul-Dec.csv",
+                        skip = 4)
+
+netflix_raw_First_Half_2023 <- netflix_raw_First_Half_2023[,-6]
+netflix_raw_Second_Half_2023 <- netflix_raw_Second_Half_2023[,-c(6:8)]
+
+netflix_raw <- rbind(netflix_raw_First_Half_2023, netflix_raw_Second_Half_2023)
+
+imdb_raw_2015 <- read_csv("merged_movies_data_2015.csv")
+imdb_raw_2016 <- read_csv("merged_movies_data_2016.csv")
+imdb_raw_2017 <- read_csv("merged_movies_data_2017.csv")
+imdb_raw_2018 <- read_csv("merged_movies_data_2018.csv")
+imdb_raw_2019 <- read_csv("merged_movies_data_2019.csv")
+imdb_raw_2020 <- read_csv("merged_movies_data_2020.csv")
+imdb_raw_2021 <- read_csv("merged_movies_data_2021.csv")
+imdb_raw_2022 <- read_csv("merged_movies_data_2022.csv")
+imdb_raw_2023 <- read_csv("merged_movies_data_2023.csv")
+
+imdb_raw <- rbind(imdb_raw_2015, imdb_raw_2016, imdb_raw_2017, imdb_raw_2018, imdb_raw_2019, imdb_raw_2020, imdb_raw_2021, imdb_raw_2022, imdb_raw_2023)
+
+netflix <- netflix_raw |>
+  select(Title = `...2`,
+         Available_Global = `...3`,
+         Release_Date = `...4`,
+         Hours_Viewed = `...5`) |>
+  filter(Title != "Title")
+
+imdb <- imdb_raw |>
+  mutate(Title = str_remove(Title, "^\\d+\\. "))
+
+joined_data <- 
+  inner_join(netflix, imdb, by = "Title")
+
+joined_data <- joined_data |>
+  mutate(
+    Hours_Viewed = readr::parse_number(Hours_Viewed),
+  )
+
+joined_data <- joined_data |>
+  select(Title, Available_Global, Hours_Viewed, Rating, budget, countries_origin, awards_content)
+
+joined_data <- joined_data |>
+  mutate(Viewership_Level = ifelse(
+    Hours_Viewed > median(Hours_Viewed, na.rm = TRUE),
+    "High Viewership",
+    "Low Viewership"
+  ))
+
+joined_data <- joined_data |>
+  mutate(Viewership_Percentage = (Hours_Viewed / sum(Hours_Viewed, na.rm = TRUE)) * 100)
+
+joined_data <- joined_data |>
+  mutate(
+    numeric_budget = readr::parse_number(budget)
+  )
+
+joined_data <- joined_data |>
+  mutate(content_origin = ifelse(str_detect(countries_origin, "United States"), "US", "International"))
+
+summary_stats <- joined_data |>
+  group_by(content_origin) |>
+  summarize(
+    avg_hours = mean(Hours_Viewed, na.rm = TRUE),
+    avg_rating = mean(Rating, na.rm = TRUE)
+  )
+
+```
+
+
+# Visualization 1
+
+## Row 1 {height=15%}
+
+::: {.card title="Question"}
+**Big Question 1:** **Does a film’s country of origin (U.S. vs International) influence its popularity and perceived quality on Netflix?**
+:::
+
+## Row 2 {height=50%}
+
+### Row 2 Column 1
+
+::: {.card title="Average Popularity"}
+```{r}
+ggplot(summary_stats, aes(x = content_origin, y = avg_hours, fill = content_origin)) +
+  geom_col(width = 0.7) +
+  geom_text(aes(label = round(avg_hours/1e6, 1)),
+            vjust = -0.5,
+            fontface = "bold") +
+  scale_fill_manual(values = c("#564d4d", "#b81d24")) +
+  labs(
+    title = "Average Popularity",
+    subtitle = "Millions of Hours Viewed",
+    x = "Film Origin",
+    y = "Hours (Millions)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+:::
+
+### Row 2 Column 1
+
+::: {.card title="Average Rating"}
+```{r}
+ggplot(summary_stats, aes(x = content_origin, y = avg_rating, fill = content_origin)) +
+  geom_col(width = 0.7) +
+  geom_text(aes(label = round(avg_rating, 1)),
+            vjust = -0.5,
+            fontface = "bold") +
+  scale_fill_manual(values = c("#564d4d", "#b81d24")) +
+  coord_cartesian(ylim = c(0,10)) +
+  labs(
+    title = "Average Quality",
+    subtitle = "IMDb User Rating (0–10)",
+    x = "Film Origin",
+    y = "Rating"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+:::
+
+## Row 3 {height=35%}
+
+::: {.card title="Analysis"}
+
+To prepare the data for this visualization, several data transformation tools from the tidyverse were used. The `mutate()` function was used to create a new variable called *content_origin*, which categorizes films as either "US" or "International" based on their country of origin. The `str_detect()` function from the stringr package was used to search the text in the countries_origin column to determine whether the United States appeared in the country list. The data was then grouped using `group_by()` and summarized with `summarize()` to calculate the average hours viewed and average rating for each category. These transformations allowed us to compare overall trends between U.S. and international films.
+
+This visualization compares the average popularity (hours viewed) and average IMDb rating of U.S. films versus international films on Netflix. The popularity chart shows that U.S. films accumulate more total hours viewed on average, suggesting they attract larger audiences on the platform. This may be influenced by factors such as broader marketing reach, higher production budgets, or the fact that Netflix’s largest audience base is in the United States.
+
+However, the average rating chart shows only a small difference in perceived quality between U.S. and international films. In some cases, international films may even have slightly higher ratings, indicating that viewers often perceive them as equally good or sometimes better in quality. This suggests that while U.S. films tend to dominate in viewership, international films remain competitive in audience satisfaction. Overall, the results highlight that popularity and perceived quality do not always align—films that attract the most viewers are not necessarily rated significantly higher.
+
+:::
+
+
+
+
+# Visualization 2
+
+## Row 1 {height=15%}
+
+::: {.card title="Question"}
+**Big Question 2:** **Is there a relationship between a movie’s production budget and its total viewership on Netflix?**
+:::
+
+## Row 2 {height=50%}
+
+::: {.card title="Budget vs Popularity"}
+```{r}
+scatplot <- ggplot(
+  joined_data,
+  aes(
+    x = numeric_budget,
+    y = Hours_Viewed,
+    color = content_origin,
+    text = paste(
+      "Title:", Title,
+      "<br>Origin:", content_origin,
+      "<br>Budget:", scales::dollar(numeric_budget)
+    )
+  )
+) +
+  geom_point(alpha = 0.7) +
+  scale_color_manual(values = c("US" = "#b81d24", "International" = "black")) +
+  labs(
+    title = "Budget vs Netflix Viewership",
+    subtitle = "Hover over points to see movie details",
+    x = "Production Budget (USD)",
+    y = "Hours Viewed"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+ggplotly(scatplot, tooltip = "text")
+```
+:::
+
+## Row 3 {height=35%}
+
+::: {.card title="Analysis"}
+Before creating this visualization, the dataset required additional cleaning to ensure that the budget values could be used for numerical analysis. The `parse_number()` function from the readr package was used to extract numeric values from the budget column, which originally contained text and currency symbols. This allowed the variable to be converted into a numeric format called *numeric_budget*. The `mutate()` function was used to create this new variable so that it could be plotted against the Hours Viewed variable in the scatterplot.
+
+Movies with larger production budgets often receive more marketing and global distribution, which may influence how many viewers they attract. This scatterplot explores whether higher budget films tend to receive more hours viewed on Netflix. The regression line helps illustrate whether a general trend exists between investment in production and audience engagement. However, the plot also shows a large cluster of films with lower budgets and varying levels of viewership. This suggests that while higher budgets may increase visibility and marketing opportunities, lower-budget films can still achieve strong engagement.
+:::
+
+# Visualization 3
+
+## Row 1 {height=15%}
+
+::: {.card title="Question"}
+**Big Question 3:** **Do higher-rated movies tend to receive more viewership on Netflix, and does this pattern differ between U.S. and international films?**
+:::
+
+## Row 2 {height=50%}
+
+::: {.card title="Viewership Categories"}
+```{r}
+#| warning: false
+
+joined_data <- joined_data |>
+  mutate(rating_group = round(Rating))
+
+rating_summary <- joined_data |>
+  group_by(rating_group, content_origin) |>
+  summarize(total_hours = sum(Hours_Viewed, na.rm = TRUE))
+
+ggplot(rating_summary,
+       aes(x = rating_group,
+           y = total_hours,
+           fill = content_origin)) +
+  geom_col() +
+  scale_fill_manual(values = c("US" = "#b81d24", "International" = "black")) +
+  labs(
+    title = "Total Netflix Viewership by IMDb Rating",
+    subtitle = "Comparing U.S. and International Films",
+    x = "IMDb Rating (Rounded)",
+    y = "Total Hours Viewed",
+    fill = "Content Origin"
+  ) +
+  theme_minimal()
+```
+:::
+
+## Row 3 {height=35%}
+
+::: {.card title="Analysis"}
+To create this visualization, the dataset was first transformed using the mutate() function to create a new variable called rating_group. This variable was created using the round() function, which groups IMDb ratings by rounding them to the nearest whole number. This allows movies with similar ratings to be grouped together in a simple and interpretable way.
+
+After creating the rating groups, the data was aggregated using group_by() and summarize() from the dplyr package. The dataset was grouped by both the rounded rating category and the film’s content origin (U.S. or International), and the total hours viewed were calculated for each group. This allowed us to compare how much total viewership each rating level receives and whether those hours are primarily driven by U.S. or international films.
+
+The resulting bar chart shows how Netflix viewing hours are distributed across different IMDb rating levels. Each bar represents the total number of hours viewed for movies with a particular rating, while the stacked colors indicate whether those views come from U.S. or international films. From this visualization, we can observe that certain rating levels accumulate more viewing hours than others, suggesting that movies with moderate to high ratings may attract more engagement. However, the chart also shows that U.S. films contribute a large portion of viewing hours across many rating levels, indicating that factors beyond ratings—such as marketing or platform promotion—may also influence streaming popularity.
+:::
+
+# Coding Notes
+
+::: {.card title="Concepts and Sources"}
+Learned rbind() to combine multiple data sets that have the same columns and rows for the IMDb dataset so there are more movies that are within the Netflix data.
+<https://stackoverflow.com/questions/16138693/rbind-multiple-data-sets>
+
+Referenced regex to get a pattern for something that starts with one or more digits followed by a dot
+<https://www.w3schools.com/python/python_regex.asp>
+
+The skip() function was used to remove the header rows from the Netflix engagement dataset when loading the data. Learned about the skip argument in read.csv() from this post
+<https://stackoverflow.com/questions/39110755/skip-specific-rows-using-read-csv-in-r>
+
+How to change a string into a number. Learned about readr::parse_number() from this post
+<https://www.reddit.com/r/RStudio/comments/e8dv8c/extracting_the_numbers_into_a_new_column_with/>
+
+The str_detect() function from the stringr package was used to search for the phrase "United States" in the countries_origin column so movies could be categorized as either U.S. or International. This helped extract information from text data because the column sometimes includes multiple countries in one string.
+<https://stringr.tidyverse.org/reference/str_detect.html>
+:::
+
