@@ -1,4 +1,4 @@
-****Final Project -- Outline****
+****Final Project -- Outline****: https://ducatigirl.github.io/netflix-globalization-analysis/
 
 **What is our project about?**
 
